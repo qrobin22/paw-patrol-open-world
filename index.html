@@ -1982,23 +1982,168 @@ function buildMinimap(){ mmC=document.createElement("canvas"); mmC.width=MW; mmC
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){ g.fillStyle=MC[map[gi(x,y)]]||"#000"; g.fillRect(x,y,1,1); }
   for(const k in objs){ const o=objs[k]; if(o.t==="tree"){ g.fillStyle=o.v===1?"#2d6b4a":o.v===2?"#4aa860":o.v===3?"#e8a0c0":"#3e8e4e"; g.fillRect(o.x,o.y,1,1); } }
   buildings.forEach(b=>{ g.fillStyle="#c0392b"; g.fillRect(b.x,b.y,b.w,b.h); }); }
+/* ============ 冒险湾插画大地图（M 键）============ */
+/* 分区地标（世界坐标 → 插画徽章），按真实地理布局，方便对照路线 */
+const MAP_ZONES=[
+  {cx:160,cy:11, ic:"💧", lb:"瀑布源头", col:"#3f8fca"},
+  {cx:296,cy:20, ic:"🎿", lb:"雪山救援区", col:"#5b8bb5"},
+  {cx:246,cy:22, ic:"⛏️", lb:"杰克山矿洞", col:"#9a7b52"},
+  {cx:266,cy:47, ic:"🏰", lb:"古堡", col:"#98a0ac"},
+  {cx:325,cy:57, ic:"🌋", lb:"火山", col:"#c0392b"},
+  {cx:125,cy:85, ic:"🏙️", lb:"小镇中心", col:"#7ba7d4"},
+  {cx:141,cy:147,ic:"🛰️", lb:"瞭望塔总部", col:"#2a6fd8"},
+  {cx:48, cy:101,ic:"🌾", lb:"由美农场", col:"#8fbc5a"},
+  {cx:120,cy:163,ic:"⚓", lb:"冒险湾海港", col:"#3a6b9c"},
+  {cx:200,cy:70, ic:"🏁", lb:"赛车场", col:"#e0a53a"},
+  {cx:233,cy:109,ic:"🌴", lb:"冒险丛林", col:"#3e7a3a"},
+  {cx:268,cy:131,ic:"🗿", lb:"远古遗迹", col:"#b0a488"},
+  {cx:333,cy:116,ic:"🏜️", lb:"沙漠峡谷", col:"#d8b878"},
+  {cx:420,cy:117,ic:"🔺", lb:"金字塔", col:"#cda866"},
+  {cx:428,cy:150,ic:"🗼", lb:"老灯塔", col:"#e2ddca"},
+  {cx:466,cy:186,ic:"✨", lb:"神秘岛", col:"#7a5ea8"},
+];
+/* 区域底色晕染（世界坐标椭圆）*/
+const MAP_REGIONS=[
+  {cx:250,cy:20, rx:255,ry:34,col:"#e7eff6"},  // 北部雪原
+  {cx:325,cy:58, rx:34, ry:24,col:"#7a4a44"},  // 火山焦岩
+  {cx:365,cy:120,rx:88, ry:46,col:"#e6cf97"},  // 东部沙漠
+  {cx:233,cy:113,rx:46, ry:34,col:"#3f7a3f"},  // 丛林
+  {cx:268,cy:131,rx:28, ry:20,col:"#c8bfa0"},  // 遗迹
+  {cx:48, cy:104,rx:26, ry:18,col:"#c69a63"},  // 农田
+];
+/* 弯曲主路（世界坐标折线，平滑绘制）*/
+const MAP_ROADS=[
+  [[141,147],[128,122],[104,108],[68,102],[50,101]],
+  [[125,92],[122,122],[120,146],[120,159]],
+  [[132,88],[160,80],[188,74],[200,72]],
+  [[200,72],[218,86],[228,100],[234,108]],
+  [[205,66],[214,50],[232,34],[252,26],[292,23]],
+  [[236,110],[256,124],[270,131],[302,122],[333,116],[382,116],[418,118],[428,146]],
+  [[141,147],[150,128],[151,108],[147,94],[132,88]],
+];
+/* 河流经过点上的桥（世界坐标）*/
+const MAP_BRIDGES=[[159,45],[160,90],[151,150]];
+const NPC_FALLBACK={"灯塔爷爷":[428,150],"森林护林员":[230,101],"考古学家安娜":[418,118],"古威市长":[136,84]};
+function mainGoalPos(){
+  const st=MAIN[S.mainStage]; if(!st) return null;
+  if(st.npc){ const n=npcs&&npcs.find(o=>o.name===st.npc); if(n) return [n.x,n.y];
+    if(NPC_FALLBACK[st.npc]) return NPC_FALLBACK[st.npc]; }
+  if(st.type==="rescue") return [141,147];
+  if(st.type==="rubbing") return [268,131];
+  if(st.type==="stele") return [466,186];
+  if(st.flag==="bearCalmed") return [288,52];
+  return [141,147];
+}
+function starPath(g,x,y,r,rot){ g.beginPath();
+  for(let i=0;i<10;i++){ const a=rot+i*Math.PI/5, rr=i%2?r*0.44:r;
+    const px=x+Math.cos(a-Math.PI/2)*rr, py=y+Math.sin(a-Math.PI/2)*rr;
+    i?g.lineTo(px,py):g.moveTo(px,py); } g.closePath(); }
+function smoothStroke(g,pts){ if(pts.length<2)return; g.beginPath(); g.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length-1;i++){ const mx=(pts[i][0]+pts[i+1][0])/2,my=(pts[i][1]+pts[i+1][1])/2;
+    g.quadraticCurveTo(pts[i][0],pts[i][1],mx,my); }
+  g.lineTo(pts[pts.length-1][0],pts[pts.length-1][1]); g.stroke(); }
 function drawMinimap(){
-  const vw=cv.width,vh=cv.height, sc=Math.min((vw-120)/MW,(vh-160)/MH);
-  const mw=MW*sc, mh=MH*sc, ox=(vw-mw)/2, oy=(vh-mh)/2-10;
-  cx.fillStyle="rgba(30,20,10,.75)"; cx.fillRect(0,0,vw,vh);
-  cx.fillStyle="#fff8e7"; cx.fillRect(ox-10,oy-34,mw+20,mh+54);
-  cx.strokeStyle="#8b5a2b"; cx.lineWidth=5; cx.strokeRect(ox-10,oy-34,mw+20,mh+54);
-  cx.imageSmoothingEnabled=false; cx.drawImage(mmC,ox,oy,mw,mh);
-  cx.font="700 16px sans-serif"; cx.textAlign="center"; cx.fillStyle="#5b3a1a";
-  cx.fillText("🗺️ 冒险湾大地图（M 关闭 · 找到路牌🪧可快速旅行）",ox+mw/2,oy-12);
-  FT.forEach(f=>{ const fx=ox+f.x*sc, fy=oy+f.y*sc;
-    disc(cx,fx,fy,4,"#f1c40f"); cx.strokeStyle="#8a5a1a"; cx.lineWidth=1.5; cx.beginPath(); cx.arc(fx,fy,4,0,7); cx.stroke();
-    cx.font="700 11px sans-serif"; cx.strokeStyle="rgba(255,255,255,.8)"; cx.lineWidth=3;
-    cx.strokeText(f.n,fx,fy-7); cx.fillStyle="#5b3a1a"; cx.fillText(f.n,fx,fy-7); });
-  S.missions.forEach(m=>m.targets.forEach(t=>{ if(t.done)return;
-    const p=2+Math.sin(gameT*6)*1.5; disc(cx,ox+t.x*sc,oy+t.y*sc,p+2,"#e0393e"); }));
-  const pp=3+Math.sin(gameT*5)*1.5;
-  disc(cx,ox+ptx()*sc,oy+pty()*sc,pp+2,"#fff"); disc(cx,ox+ptx()*sc,oy+pty()*sc,pp,"#2e6fd8"); }
+  const g=cx, vw=cv.width, vh=cv.height, TAU=Math.PI*2;
+  g.save(); g.textAlign="center"; g.textBaseline="middle";
+  g.fillStyle="rgba(18,26,38,.86)"; g.fillRect(0,0,vw,vh);
+  /* 羊皮纸外框 */
+  const fx=Math.max(18,vw*0.035), fy=Math.max(14,vh*0.045), fw=vw-2*fx, fh=vh-2*fy;
+  g.fillStyle="#f6ecd2"; g.strokeStyle="#8b5a2b"; g.lineWidth=6;
+  g.beginPath(); g.rect(fx,fy,fw,fh); g.fill(); g.stroke();
+  g.strokeStyle="#c8a86a"; g.lineWidth=2; g.strokeRect(fx+7,fy+7,fw-14,fh-14);
+  /* 地图海域区域，按世界纵横比 2.5:1 居中 */
+  const mL=fx+22,mT=fy+44,mR=fx+fw-22,mB=fy+fh-46, aw=MW/MH;
+  let mapX=mL,mapY=mT,mapW=mR-mL,mapH=mB-mT;
+  if(mapW/mapH>aw){ const nw=mapH*aw; mapX+=(mapW-nw)/2; mapW=nw; }
+  else { const nh=mapW/aw; mapY+=(mapH-nh)/2; mapH=nh; }
+  const wx=x=>mapX+x/MW*mapW, wy=y=>mapY+y/MH*mapH, sX=mapW/MW, sY=mapH/MH;
+  g.save(); g.beginPath(); g.rect(mapX,mapY,mapW,mapH); g.clip();
+  /* 海洋 */
+  const og=g.createLinearGradient(0,mapY,0,mapY+mapH);
+  og.addColorStop(0,"#3a8fc8"); og.addColorStop(1,"#1f5f9c");
+  g.fillStyle=og; g.fillRect(mapX,mapY,mapW,mapH);
+  g.strokeStyle="rgba(255,255,255,.16)"; g.lineWidth=1.4;
+  for(let i=1;i<=7;i++){ const yy=mapY+mapH*i/8; g.beginPath();
+    for(let xx=mapX;xx<=mapX+mapW;xx+=14){ const oy=yy+Math.sin(xx*0.05+i)*2.4; xx===mapX?g.moveTo(xx,oy):g.lineTo(xx,oy);} g.stroke(); }
+  /* 海岛轮廓（不规则海岸线 + 南部海湾）*/
+  const lc={x:wx(250),y:wy(88)}, rx=mapW*0.47, ry=mapH*0.45, N=80;
+  const hAng=Math.atan2(wy(120)-lc.y, wx(120)-lc.x);
+  const coast=(f)=>{ const p=[]; for(let i=0;i<=N;i++){ const a=i/N*TAU;
+    let r=1+0.045*Math.sin(a*3+0.7)+0.03*Math.sin(a*6+2.1)-0.018*Math.sin(a*5+1);
+    let da=Math.atan2(Math.sin(a-hAng),Math.cos(a-hAng)); r-=0.15*Math.exp(-(da*da)/0.05);
+    p.push([lc.x+Math.cos(a)*rx*r*f, lc.y+Math.sin(a)*ry*r*f]); } return p; };
+  const pathOf=(p)=>{ g.beginPath(); g.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++)g.lineTo(p[i][0],p[i][1]); g.closePath(); };
+  pathOf(coast(1.0)); g.fillStyle="#e6d59a"; g.fill();          // 沙滩环
+  g.save(); pathOf(coast(1.0)); g.clip();
+  pathOf(coast(0.955)); g.fillStyle="#79b84c"; g.fill();        // 草地陆地
+  /* 区域晕染 */
+  MAP_REGIONS.forEach(z=>{ g.globalAlpha=0.55; g.fillStyle=z.col; g.beginPath();
+    g.ellipse(wx(z.cx),wy(z.cy),z.rx*sX,z.ry*sY,0,0,TAU); g.fill(); });
+  g.globalAlpha=1;
+  /* 河流（北瀑布→南海湾）+ 桥 */
+  const riv=[]; for(let y=8;y<=176;y+=4){ const rvx=160+8*Math.sin(y*0.06)+3*Math.sin(y*0.21); riv.push([wx(rvx),wy(y)]); }
+  g.lineCap="round"; g.lineJoin="round";
+  g.strokeStyle="#2f79b8"; g.lineWidth=Math.max(4,5*sX); smoothStroke(g,riv);
+  g.strokeStyle="#6fb3e0"; g.lineWidth=Math.max(1.5,2.2*sX); smoothStroke(g,riv);
+  /* 弯曲道路 */
+  MAP_ROADS.forEach(rd=>{ const p=rd.map(q=>[wx(q[0]),wy(q[1])]);
+    g.strokeStyle="#b98a4e"; g.lineWidth=Math.max(4,4.4*sY); smoothStroke(g,p);
+    g.strokeStyle="#e8cf94"; g.lineWidth=Math.max(2,2.4*sY); smoothStroke(g,p); });
+  MAP_BRIDGES.forEach(b=>{ const bx=wx(b[0]),by=wy(b[1]),bw=Math.max(9,10*sX),bh=Math.max(4,3.4*sY);
+    g.fillStyle="#8a5a2b"; g.fillRect(bx-bw/2,by-bh/2,bw,bh);
+    g.strokeStyle="#6b4423"; g.lineWidth=1; for(let k=-bw/2;k<bw/2;k+=3){ g.beginPath(); g.moveTo(bx+k,by-bh/2); g.lineTo(bx+k,by+bh/2); g.stroke(); } });
+  g.restore(); // 结束陆地裁剪
+  /* 神秘岛（海上小岛）*/
+  const mi={x:wx(466),y:wy(186)}; g.beginPath(); g.ellipse(mi.x,mi.y,15*sX,10*sY,0,0,TAU); g.fillStyle="#e6d59a"; g.fill();
+  g.beginPath(); g.ellipse(mi.x,mi.y,15*sX*0.7,10*sY*0.7,0,0,TAU); g.fillStyle="#79b84c"; g.fill();
+  g.restore(); // 结束海域裁剪
+  /* 岛屿描边 */
+  pathOf(coast(1.0)); g.strokeStyle="#5c7a3a"; g.lineWidth=2.2; g.stroke();
+  /* 地标徽章 */
+  const R=Math.max(11,Math.min(19,mapH*0.033));
+  MAP_ZONES.forEach(z=>{ const bx=wx(z.cx),by=wy(z.cy);
+    g.beginPath(); g.arc(bx,by,R,0,TAU); g.fillStyle=z.col; g.fill();
+    g.lineWidth=2.4; g.strokeStyle="#fff8ea"; g.stroke();
+    g.font=(R*1.15|0)+"px sans-serif"; g.fillText(z.ic,bx,by+1);
+    g.font="700 "+Math.max(10,R*0.72|0)+"px sans-serif";
+    g.lineWidth=3.4; g.strokeStyle="rgba(255,255,255,.92)"; g.strokeText(z.lb,bx,by+R+9);
+    g.fillStyle="#4a3316"; g.fillText(z.lb,bx,by+R+9); });
+  /* 救援警报（红色脉冲）*/
+  S.missions.forEach(m=>m.targets.forEach(t=>{ if(t.done)return; const p=Math.sin(gameT*6)*2;
+    const tx=wx(t.x),ty=wy(t.y); g.beginPath(); g.arc(tx,ty,R*0.75+p,0,TAU); g.fillStyle="rgba(224,57,62,.28)"; g.fill();
+    g.beginPath(); g.arc(tx,ty,R*0.5,0,TAU); g.fillStyle="#e0393e"; g.fill();
+    g.lineWidth=2; g.strokeStyle="#fff"; g.stroke();
+    g.font=Math.max(9,R*0.6|0)+"px sans-serif"; g.fillStyle="#fff"; g.fillText("❗",tx,ty+1); }));
+  /* 主线目标（金色星）*/
+  const gp=mainGoalPos(); if(gp){ const gx=wx(gp[0]),gy=wy(gp[1]), pr=R*0.9+Math.sin(gameT*4)*2;
+    starPath(g,gx,gy,pr+3,gameT*0.6); g.fillStyle="rgba(255,214,64,.35)"; g.fill();
+    starPath(g,gx,gy,pr,gameT*0.6); g.fillStyle="#ffd23f"; g.fill();
+    g.lineWidth=2; g.strokeStyle="#a9761a"; g.stroke(); }
+  /* 玩家位置（蓝色发光点）*/
+  const px=wx(ptx()),py=wy(pty()), pp=R*0.55+Math.sin(gameT*5)*2;
+  g.beginPath(); g.arc(px,py,pp+5,0,TAU); g.fillStyle="rgba(46,111,216,.30)"; g.fill();
+  g.beginPath(); g.arc(px,py,pp+2,0,TAU); g.fillStyle="#fff"; g.fill();
+  g.beginPath(); g.arc(px,py,pp,0,TAU); g.fillStyle="#2e6fd8"; g.fill();
+  /* 标题 */
+  g.font="800 "+Math.max(16,Math.min(26,fw*0.02|0))+"px sans-serif"; g.fillStyle="#5b3a1a";
+  g.fillText("🗺️ 冒险湾 · Adventure Bay",fx+fw/2,fy+24);
+  /* 指南针 */
+  const cxo=fx+fw-40,cyo=fy+fh-40,cr=18;
+  g.beginPath(); g.arc(cxo,cyo,cr,0,TAU); g.fillStyle="rgba(255,248,234,.9)"; g.fill();
+  g.lineWidth=2; g.strokeStyle="#8b5a2b"; g.stroke();
+  g.beginPath(); g.moveTo(cxo,cyo-cr+3); g.lineTo(cxo-5,cyo+2); g.lineTo(cxo+5,cyo+2); g.closePath();
+  g.fillStyle="#d0413b"; g.fill(); g.font="700 10px sans-serif"; g.fillStyle="#5b3a1a"; g.fillText("N",cxo,cyo+cr-6);
+  /* 图例 */
+  g.textAlign="left"; g.font="600 13px sans-serif";
+  let lx=fx+22, ly=fy+fh-26;
+  g.beginPath(); g.arc(lx+6,ly,6,0,TAU); g.fillStyle="#2e6fd8"; g.fill();
+  g.fillStyle="#4a3316"; g.fillText("你的位置",lx+16,ly);
+  lx+=104; starPath(g,lx+6,ly,7,0); g.fillStyle="#ffd23f"; g.fill(); g.strokeStyle="#a9761a"; g.lineWidth=1.5; g.stroke();
+  g.fillStyle="#4a3316"; g.fillText("主线目标",lx+16,ly);
+  lx+=104; g.beginPath(); g.arc(lx+6,ly,6,0,TAU); g.fillStyle="#e0393e"; g.fill();
+  g.fillStyle="#4a3316"; g.fillText("救援警报",lx+16,ly);
+  lx+=104; g.fillStyle="#6b4a24"; g.fillText("按 M 关闭地图",lx,ly);
+  g.restore(); }
 
 /* ================= 主渲染 ================= */
 function render(){
