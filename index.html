@@ -260,7 +260,7 @@ const okey=(x,y)=>x+","+y;
 const getO=(x,y)=>objs[okey(x,y)];
 function setO(x,y,o){ o.x=x; o.y=y; objs[okey(x,y)]=o; }
 function delO(x,y){ delete objs[okey(x,y)]; }
-let buildings=[], npcs=[];
+let buildings=[], npcs=[], STRING_LIGHTS=[];
 function fillEllipse(cx0,cy0,rx,ry,t){ for(let y=Math.floor(cy0-ry);y<=cy0+ry;y++)for(let x=Math.floor(cx0-rx);x<=cx0+rx;x++)
   if(((x-cx0)/rx)**2+((y-cy0)/ry)**2<=1) setT(x,y,t); }
 function fillRect(x0,y0,w,h,t){ for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++) setT(x,y,t); }
@@ -268,7 +268,7 @@ function layRoad(x,y,wide=1){ for(let i=0;i<wide;i++)for(let j=0;j<wide;j++){
   const t=tileAt(x+i,y+j); setT(x+i,y+j, t===T.WATER?T.WOOD : t===T.LAVA?T.WOOD : T.PATH); } }
 
 function genWorld(){
-  const R=mulberry32(20260704); objs={};
+  const R=mulberry32(20260704); objs={}; STRING_LIGHTS=[];
   /* ---- 基础地带 ---- */
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
     let t=T.GRASS;
@@ -435,6 +435,8 @@ function genWorld(){
   // 救援巡逻艇（港口 + 灯塔）
   setO(131,174,{t:"boat"}); setO(435,173,{t:"boat"});
   /* ---- 快速旅行路牌 ---- */
+  /* ---- 分区域生活化样板扩展（Codex 出生点标准，铺到真实世界）---- */
+  applySpawnShowcase(R); applyTownShowcase(R); applyHarborShowcase(R); applyFarmShowcase(R); applyWildShowcase(R);
   FT.forEach((f,i)=>{ setT(f.x,f.y,T.PATH); setT(f.x,f.y+1,T.PATH); delO(f.x,f.y+1); setO(f.x,f.y,{t:"sign",ft:i}); });
   /* ---- 隐藏宝箱 ×24 ---- */
   const chestSpots=[[30,12],[470,14],[228,6],[268,8],[190,50],[285,60],[240,142],[222,112],
@@ -542,6 +544,10 @@ function genWorld(){
      d:["呜……（它警惕地压低身子）","（黑暗中的爪牙盯着你，却没有扑上来）","嗷呜……（它的眼神里似乎藏着孤独）"]},
   ];
   npcs.forEach(n=>{n.hx=n.x;n.hy=n.y;n.mt=0;S.friendship[n.name]=S.friendship[n.name]||0;});
+  /* ---- 保护性清理：移除落在 NPC/出生点/快速旅行点上的阻挡装饰，确保可达 ---- */
+  const clearBlock=(x,y)=>{ const o=getO(x,y); if(o&&BLOCKERS.includes(o.t)&&o.t!=="sign") delO(x,y); };
+  npcs.forEach(n=>{ const x=Math.round(n.x),y=Math.round(n.y); clearBlock(x,y); clearBlock(x,y+1); });
+  clearBlock(70,96); FT.forEach(f=>clearBlock(f.x,f.y+1));
 }
 /* ================= 工具函数 ================= */
 const $=id=>document.getElementById(id);
@@ -1028,8 +1034,14 @@ function drawTile(x,y){
   else if(t===T.STONE){ cx.fillStyle=h%2?"#b0b4bc":"#a9adb5"; cx.fillRect(sx,sy,TILE,TILE);
     cx.strokeStyle="#8f939b"; cx.lineWidth=1.5; cx.strokeRect(sx+1,sy+1,TILE-2,TILE-2);
     if(h%2) { cx.beginPath(); cx.moveTo(sx+16,sy); cx.lineTo(sx+16,sy+16); cx.lineTo(sx+32,sy+16); cx.stroke(); } }
-  else if(t===T.SOIL){ cx.fillStyle=h%2?"#b58c5f":"#ae8558"; cx.fillRect(sx,sy,TILE,TILE);
-    if(h%4===0){ cx.fillStyle="#9c7448"; cx.fillRect(sx+(h%20),sy+(h%18)+4,4,3); } }
+  else if(t===T.SOIL){ cx.fillStyle=chk?"#b88f61":"#ad8455"; cx.fillRect(sx,sy,TILE,TILE);
+    if(h%3===0){ cx.fillStyle="#a37c4d"; cx.fillRect(sx+rp(1,18),sy+rp(2,16)+2,9,6); }
+    // 土块 + 石子
+    const nc=1+(h%3); for(let i=0;i<nc;i++){ const px=sx+rp(i+3,24)+3, py=sy+rp(i+7,22)+3;
+      cx.fillStyle="#9c7448"; disc(cx,px,py,2,"#9c7448"); cx.fillStyle="#c2a072"; disc(cx,px-.6,py-.6,1,"#c2a072"); }
+    if(h%9===2){ cx.fillStyle="#8a6742"; cx.fillRect(sx+rp(4,22),sy+rp(5,10)+18,6,2); }
+    // 偶尔冒出的小嫩芽
+    if(h%17===5){ cx.fillStyle="#6fae4a"; cx.fillRect(sx+rp(6,22)+4,sy+rp(7,14)+8,2,5); cx.fillRect(sx+rp(6,22)+2,sy+rp(7,14)+10,2,3); } }
   else if(t===T.TILLED){ cx.fillStyle="#8a6742"; cx.fillRect(sx,sy,TILE,TILE);
     cx.fillStyle="#75563a"; cx.fillRect(sx,sy+6,TILE,4); cx.fillRect(sx,sy+15,TILE,4); cx.fillRect(sx,sy+24,TILE,4); }
   else if(t===T.WATERED){ cx.fillStyle="#6b4e30"; cx.fillRect(sx,sy,TILE,TILE);
@@ -1661,16 +1673,141 @@ function dockGear(wx,wy){ const px=wx*TILE-cam.x, py=wy*TILE-cam.y;
   cx.fillStyle="#7a5230"; rrect(cx,px+4,py+12,16,16,3,"#7a5230"); cx.fillStyle="#946a3e"; cx.fillRect(px+4,py+17,16,2); cx.fillRect(px+4,py+23,16,2);
   cx.strokeStyle="#c8a86a"; cx.lineWidth=2.4; cx.beginPath(); cx.arc(px-8,py+24,6,0,7); cx.stroke();
   cx.strokeStyle="#b3925a"; cx.lineWidth=2.4; cx.beginPath(); cx.arc(px-8,py+24,3,0,7); cx.stroke(); }
+/* ===== 可复用生活化装饰组件（样板区标准，供各区域复用）===== */
+function drawStringLights(wx1,wy1,wx2,wy2){ return garland(wx1,wy1,wx2,wy2); }
+function drawCrate(bx,by){
+  cx.fillStyle="rgba(0,0,0,.16)"; cx.beginPath(); cx.ellipse(bx+16,by+26,12,4,0,0,7); cx.fill();
+  cx.fillStyle="#9a6b3a"; rrect(cx,bx+4,by+7,24,19,2,"#9a6b3a");
+  cx.fillStyle="#b9884f"; cx.fillRect(bx+6,by+9,20,15);
+  cx.strokeStyle="#7a5230"; cx.lineWidth=2; cx.strokeRect(bx+6,by+9,20,15);
+  cx.beginPath(); cx.moveTo(bx+6,by+9); cx.lineTo(bx+26,by+24); cx.moveTo(bx+26,by+9); cx.lineTo(bx+6,by+24); cx.stroke();
+  cx.fillStyle="#caa76e"; cx.fillRect(bx+6,by+7,20,2); }
+function drawPlanter(bx,by){
+  cx.fillStyle="rgba(0,0,0,.16)"; cx.beginPath(); cx.ellipse(bx+16,by+26,11,4,0,0,7); cx.fill();
+  [["#e0544e",-5],["#e8b83a",5],["#e87ba0",0]].forEach(([c,ox])=>{ cx.fillStyle="#3a8a3a"; cx.fillRect(bx+15+ox,by+4,2,11);
+    disc(cx,bx+16+ox,by+5,3.4,c); cx.fillStyle="#fff7d8"; disc(cx,bx+16+ox,by+5,1.2,"#fff7d8"); });
+  cx.fillStyle="#b5623a"; cx.beginPath(); cx.moveTo(bx+6,by+14); cx.lineTo(bx+26,by+14); cx.lineTo(bx+23,by+26); cx.lineTo(bx+9,by+26); cx.closePath(); cx.fill();
+  cx.fillStyle="#8a4a2a"; cx.fillRect(bx+6,by+13,20,3); }
+function drawMarketStall(bx,by){
+  cx.fillStyle="rgba(0,0,0,.18)"; cx.beginPath(); cx.ellipse(bx+18,by+30,26,6,0,0,7); cx.fill();
+  cx.fillStyle="#7a5230"; cx.fillRect(bx-3,by-4,3,32); cx.fillRect(bx+36,by-4,3,32);
+  cx.fillStyle="#9a6b3a"; cx.fillRect(bx-3,by+17,42,11); cx.fillStyle="#b9884f"; cx.fillRect(bx-3,by+17,42,3);
+  cx.fillStyle="#c94a3a"; cx.fillRect(bx-8,by-9,52,6);
+  for(let i=0;i<7;i++){ cx.fillStyle=i%2?"#e05848":"#f4efe2"; cx.beginPath();
+    cx.moveTo(bx-8+i*7.4,by-3); cx.lineTo(bx-8+i*7.4+7.4,by-3); cx.lineTo(bx-8+i*7.4+3.7,by+5); cx.closePath(); cx.fill(); }
+  disc(cx,bx+4,by+15,3,"#e0684a"); disc(cx,bx+13,by+15,3,"#6fae4a"); disc(cx,bx+22,by+15,3,"#e8b83a"); disc(cx,bx+31,by+15,3,"#c98be0"); }
+function drawDockPost(bx,by){
+  cx.fillStyle="rgba(0,0,0,.15)"; cx.beginPath(); cx.ellipse(bx+16,by+28,7,3,0,0,7); cx.fill();
+  cx.fillStyle="#6b4a2c"; cx.fillRect(bx+11,by+3,9,25); cx.fillStyle="#835c38"; cx.fillRect(bx+11,by+3,3,25);
+  cx.fillStyle="#4f3d2a"; cx.beginPath(); cx.ellipse(bx+15.5,by+3,5,3,0,0,7); cx.fill();
+  cx.strokeStyle="#c8a86a"; cx.lineWidth=2; cx.beginPath(); cx.moveTo(bx+11,by+9); cx.quadraticCurveTo(bx+1,by+15,bx+5,by+24); cx.stroke(); }
+function drawReed(bx,by){
+  cx.strokeStyle="#4a7a3a"; cx.lineWidth=2;
+  [[-5,1],[0,-2],[5,0]].forEach(([ox,oy],i)=>{ cx.beginPath(); cx.moveTo(bx+16+ox,by+26); cx.lineTo(bx+16+ox+(i-1)*2,by+6+oy); cx.stroke();
+    cx.fillStyle="#8a5a2e"; rrect(cx,bx+15+ox+(i-1)*2,by+3+oy,3,8,1.5,"#8a5a2e"); });
+  cx.strokeStyle="#5a8a44"; cx.lineWidth=1.5; cx.beginPath(); cx.moveTo(bx+12,by+26); cx.lineTo(bx+9,by+12); cx.moveTo(bx+21,by+26); cx.lineTo(bx+24,by+10); cx.stroke(); }
+function drawHay(bx,by){
+  cx.fillStyle="rgba(0,0,0,.16)"; cx.beginPath(); cx.ellipse(bx+16,by+26,13,4,0,0,7); cx.fill();
+  cx.fillStyle="#e0c058"; rrect(cx,bx+2,by+8,28,18,4,"#e0c058");
+  cx.strokeStyle="#c8a63a"; cx.lineWidth=1.5; for(let i=0;i<4;i++){ cx.beginPath(); cx.moveTo(bx+2,by+11+i*4); cx.lineTo(bx+30,by+11+i*4); cx.stroke(); }
+  cx.fillStyle="#a88a2a"; cx.fillRect(bx+11,by+8,3,18); cx.fillRect(bx+19,by+8,3,18); }
+
+/* ===== 世界生成辅助：弯曲道路 / 清直路 / 安全放置装饰 ===== */
+function catmull(pts,seg){ const o=[]; const P=pts.length;
+  for(let i=0;i<P-1;i++){ const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(P-1,i+2)];
+    for(let t=0;t<seg;t++){ const u=t/seg,u2=u*u,u3=u2*u;
+      o.push([0.5*(2*p1[0]+(-p0[0]+p2[0])*u+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*u2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*u3),
+              0.5*(2*p1[1]+(-p0[1]+p2[1])*u+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*u2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*u3)]); } }
+  o.push(pts[P-1]); return o; }
+function organicRoad(pts,w=1){ const dense=catmull(pts,9);
+  dense.forEach(([fx,fy],i)=>{ const cx0=Math.round(fx),cy0=Math.round(fy), r=Math.max(1,Math.round(w+0.45*Math.sin(i*0.5)));
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){ if(dx*dx+dy*dy>r*r+0.6) continue;
+      const x=cx0+dx,y=cy0+dy,t=tileAt(x,y);
+      if(t===T.WATER||t===T.LAVA) setT(x,y,T.WOOD);
+      else if(t===T.GRASS||t===T.SAND||t===T.SOIL||t===T.SNOW) setT(x,y,T.PATH); } }); }
+function clearRoadsIn(x0,y0,x1,y1){ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++) if(tileAt(x,y)===T.PATH) setT(x,y,T.GRASS); }
+function placeDeco(x,y,t,extra){ x=Math.round(x); y=Math.round(y);
+  if(!WALKABLE(tileAt(x,y))) return; if(getO(x,y)) return;
+  for(const b of buildings) if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h) return;
+  setO(x,y,Object.assign({t:t},extra||{})); }
+function clusterTrees(cx0,cy0,rx,ry,n,v,R){ for(let i=0;i<n;i++){ const x=Math.round(cx0+(R()*2-1)*rx), y=Math.round(cy0+(R()*2-1)*ry);
+  const t=tileAt(x,y); if((t===T.GRASS||t===T.SNOW||(v===2&&t===T.SAND))&&!getO(x,y)) setO(x,y,{t:"tree",v:v}); } }
+
+/* ===== 分区域样板扩展（世界生成末尾调用）===== */
+function applySpawnShowcase(R){
+  organicRoad([[60,97],[70,95],[82,93],[95,92],[108,91]],1);
+  placeDeco(66,98,"crate"); placeDeco(68,98,"planter"); placeDeco(61,98,"hay");
+  [[44,91],[49,90],[52,91]].forEach(p=>placeDeco(p[0],p[1],"reed"));
+  clusterTrees(76,104,5,4,7,0,R); clusterTrees(88,112,5,4,6,3,R);
+}
+function applyTownShowcase(R){
+  clearRoadsIn(100,74,156,102);
+  fillEllipse(125,90,12,8,T.STONE);                 // 扩大广场石板
+  // 弯曲主街 + 通往各店门口的支路
+  organicRoad([[100,93],[110,90],[125,89],[140,90],[156,92]],1);
+  organicRoad([[125,90],[124,100],[126,112],[130,124]],1);   // 广场→南（通海港/瞭望台方向）
+  organicRoad([[118,88],[113,84],[110,81]],1);      // →波特餐馆门口
+  organicRoad([[133,88],[135,83],[136,82]],1);      // →市政厅门口
+  organicRoad([[140,89],[147,87],[152,88]],1);      // →宠物乐园门口
+  organicRoad([[108,91],[100,93]],1);
+  // 广场花坛 / 座椅 / 路灯
+  [[116,84],[134,84],[116,96],[134,96]].forEach(p=>placeDeco(p[0],p[1],"flowerbed"));
+  [[120,84],[130,84],[120,96],[130,96]].forEach(p=>placeDeco(p[0],p[1],"bench"));
+  [[113,88],[137,88],[113,93],[137,93]].forEach(p=>placeDeco(p[0],p[1],"lamp"));
+  // 门口生活装饰
+  placeDeco(109,82,"planter"); placeDeco(111,82,"crate"); placeDeco(120,86,"stall");
+  placeDeco(134,82,"planter"); placeDeco(138,82,"planter");
+  placeDeco(151,87,"planter"); placeDeco(149,90,"crate");
+  placeDeco(103,90,"notice");
+  // 广场灯串
+  STRING_LIGHTS.push([115,83,135,83],[112,90,112,96],[138,90,138,96]);
+}
+function applyHarborShowcase(R){
+  organicRoad([[123,112],[122,132],[121,150],[120,159]],1);   // 镇→海港弯曲沙土路
+  // 码头木桩 + 渔具 + 货箱 + 鱼摊
+  [[117,164],[117,168],[130,166],[130,170]].forEach(p=>placeDeco(p[0],p[1],"dockpost"));
+  placeDeco(129,160,"stall"); placeDeco(133,160,"crate"); placeDeco(134,161,"crate");
+  placeDeco(112,160,"crate"); placeDeco(96,159,"planter");
+  // 岸边芦苇（水陆交界的陆侧）
+  [[110,163],[135,164],[142,163],[104,162]].forEach(p=>placeDeco(p[0],p[1],"reed"));
+  // 灯塔码头细节（东南）
+  [[430,166],[430,170],[434,168]].forEach(p=>placeDeco(p[0],p[1],"dockpost"));
+  placeDeco(426,160,"crate"); placeDeco(438,163,"reed");
+  STRING_LIGHTS.push([118,158,132,158]);
+}
+function applyFarmShowcase(R){
+  // 农田边缘去矩形化：外圈补有机土斑
+  for(let i=0;i<26;i++){ const x=31+(R()*33|0), y=(R()<.5?94:119)+(R()*2-1|0);
+    if(tileAt(x,y)===T.GRASS) fillEllipse(x,y,1+(R()*2|0),1,T.SOIL); }
+  organicRoad([[48,94],[55,96],[63,97]],1);
+  placeDeco(66,97,"hay"); placeDeco(68,98,"hay"); placeDeco(66,99,"crate");
+  placeDeco(62,82,"hay"); placeDeco(60,83,"barrel"); placeDeco(58,82,"crate");
+  [[46,91],[43,90]].forEach(p=>placeDeco(p[0],p[1],"reed"));
+  clusterTrees(30,108,4,6,6,3,R);
+  STRING_LIGHTS.push([60,79,68,79]);
+}
+function applyWildShowcase(R){
+  // 丛林：成组树丛 + 木桥 + 营地货箱
+  clusterTrees(206,112,7,7,14,0,R); clusterTrees(250,118,7,6,12,0,R);
+  organicRoad([[216,128],[214,120],[216,113]],1);        // 丛林湖畔小径
+  for(let y=126;y<132;y++){ setT(213,y,T.WOOD); setT(214,y,T.WOOD); setT(215,y,T.WOOD); } // 丛林木桥
+  placeDeco(234,96,"crate"); placeDeco(224,100,"crate"); placeDeco(240,99,"hay");
+  // 雪山：雪堆 + 木屋路标 + 救援货箱
+  clusterTrees(300,24,8,5,10,1,R);
+  placeDeco(296,26,"crate"); placeDeco(302,26,"dockpost"); placeDeco(244,26,"crate");
+  for(let i=0;i<30;i++){ const x=270+(R()*70|0), y=14+(R()*20|0); if(tileAt(x,y)===T.SNOW&&!getO(x,y)&&R()<.4) fillEllipse(x,y,1+(R()*2|0),1,T.ICE); }
+  // 沙漠：石块群 + 仙人掌组 + 帐篷货箱
+  clusterTrees(360,120,10,8,10,2,R);
+  placeDeco(348,118,"crate"); placeDeco(352,120,"tent"); placeDeco(356,121,"barrel");
+  for(let i=0;i<40;i++){ const x=310+(R()*90|0), y=98+(R()*60|0); if(tileAt(x,y)===T.SAND&&!getO(x,y)&&R()<.5) setO(x,y,{t:"rock"}); }
+}
+
 function drawSceneProps(x0,y0,x1,y1){
-  const vis=(tx,ty)=>tx>=x0-6&&tx<=x1+6&&ty>=y0-6&&ty<=y1+8;
-  // 小镇广场灯串（挂在木杆之间）
-  if(vis(120,84)){ gpost(108,84); gpost(142,84); garland(108,82,142,82); }
-  if(vis(120,95)){ gpost(110,96); gpost(140,96); garland(110,94,140,94); }
-  // 波特小餐馆门口露天桌椅
+  const vis=(tx,ty)=>tx>=x0-8&&tx<=x1+8&&ty>=y0-8&&ty<=y1+8;
+  STRING_LIGHTS.forEach(s=>{ const mx=(s[0]+s[2])/2,my=(s[1]+s[3])/2; if(!vis(mx,my))return;
+    gpost(s[0],s[1]); gpost(s[2],s[3]); drawStringLights(s[0],s[1]-2,s[2],s[3]-2); });
   if(vis(105,82)) cafeScene(103,82);
-  // 艾玛博士诊所急救牌
   if(vis(112,103)) crossSign(112,103);
-  // 港口渔具
   if(vis(116,162)) dockGear(116,161);
 }
 
@@ -2463,6 +2600,12 @@ function render(){
       else if(o.t==="buoy") drawBuoy(bx,by);
       else if(o.t==="notice") drawNotice(bx,by);
       else if(o.t==="flowerbed") drawFlowerbed(bx,by);
+      else if(o.t==="crate") drawCrate(bx,by);
+      else if(o.t==="planter") drawPlanter(bx,by);
+      else if(o.t==="stall") drawMarketStall(bx,by);
+      else if(o.t==="dockpost") drawDockPost(bx,by);
+      else if(o.t==="reed") drawReed(bx,by);
+      else if(o.t==="hay") drawHay(bx,by);
       else if(o.t==="boat") drawBoat(bx,by);
       else if(o.t==="sign"){ cx.drawImage(SPR.sign,bx+1,by-4);
         cx.font="14px serif"; cx.textAlign="center"; cx.fillText("🚌",bx+16,by-10); }
@@ -2570,7 +2713,7 @@ addEventListener("keydown",e=>{
 });
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-const BLOCKERS=["tree","rock","cactus","bear","chest","fence","lamp","bench","barrel","pillar","turbine","stump","suv","heli","tent","campfire","logs","tower","umbrella","chair","volley","buoy","notice","flowerbed","boat"];
+const BLOCKERS=["tree","rock","cactus","bear","chest","fence","lamp","bench","barrel","pillar","turbine","stump","suv","heli","tent","campfire","logs","tower","umbrella","chair","volley","buoy","notice","flowerbed","boat","crate","planter","stall","dockpost","hay"];
 function blocked(tx,ty){
   if(S.inside!=null) return roomBlocked(tx,ty);
   if(tx<0||ty<0||tx>=MW||ty>=MH) return true;
