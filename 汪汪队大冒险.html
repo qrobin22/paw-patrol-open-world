@@ -83,6 +83,49 @@
   #nightfade { position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity 1.2s; z-index:15; }
   #hintbar { position:absolute; bottom:76px; left:12px; font-size:13px; color:#fff; text-shadow:0 1px 2px #000;
              background:rgba(0,0,0,.35); padding:6px 12px; border-radius:10px; line-height:1.6; }
+/* ===== 人物图鉴 ===== */
+#codex{ position:fixed; inset:0; z-index:60; display:none;
+  background:linear-gradient(180deg,#bfe4ff 0%,#dff1ff 45%,#eef8ff 100%);
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif; color:#284a6b; overflow:hidden; }
+#codex .cxHead{ display:flex; align-items:center; justify-content:center; gap:12px; padding:14px 0 8px; position:relative; }
+#codex .cxHead h2{ font-size:30px; font-weight:800; color:#1e5aa8; letter-spacing:2px;
+  text-shadow:0 2px 0 #fff,0 3px 6px rgba(40,90,150,.18); }
+#codex .cxClose{ position:absolute; right:22px; top:14px; width:40px; height:40px; border:none; border-radius:50%;
+  background:#fff; color:#1e5aa8; font-size:20px; font-weight:800; cursor:pointer; box-shadow:0 3px 8px rgba(40,90,150,.25); }
+#codex .cxProg{ text-align:center; font-size:14px; color:#4a76a8; margin-bottom:6px; }
+#codex .cxBody{ display:flex; height:calc(100% - 96px); padding:0 20px 18px; gap:16px; }
+#codex .cxTabs{ display:flex; flex-direction:column; gap:12px; flex:0 0 118px; padding-top:6px; }
+#codex .cxTab{ writing-mode:vertical-rl; text-orientation:upright; letter-spacing:4px; font-size:19px; font-weight:800;
+  padding:16px 10px; border-radius:16px; cursor:pointer; background:#7fb4e6; color:#eaf5ff;
+  box-shadow:0 3px 0 #5c93cc; text-align:center; transition:transform .1s; user-select:none; }
+#codex .cxTab.on{ background:#ffb43a; color:#fff; box-shadow:0 3px 0 #d98b16; transform:translateX(3px); }
+#codex .cxGrid{ flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:14px; align-content:start; padding:4px 6px 20px; }
+#codex .ccard{ background:#fff; border-radius:16px; padding:12px 8px 10px; text-align:center; cursor:pointer;
+  box-shadow:0 4px 10px rgba(60,110,170,.16); border:2px solid #eaf3fb; transition:transform .12s,box-shadow .12s; }
+#codex .ccard:hover{ transform:translateY(-4px); box-shadow:0 10px 18px rgba(60,110,170,.28); }
+#codex .ccard.locked{ background:#eef2f6; border-color:#e0e6ec; }
+#codex .ccard canvas{ width:84px; height:84px; image-rendering:pixelated; border-radius:50%;
+  background:linear-gradient(180deg,#eaf6ff,#d3ecff); box-shadow:inset 0 0 0 3px #fff,0 2px 5px rgba(60,110,170,.2); }
+#codex .cName{ font-size:16px; font-weight:800; margin-top:8px; color:#26456a; }
+#codex .ccard.locked .cName{ color:#9aa7b4; }
+#codex .cRole{ font-size:12px; color:#6a8bb0; margin-top:1px; }
+#codex .cTag{ display:inline-block; font-size:11px; margin-top:6px; padding:2px 9px; border-radius:10px;
+  background:#eaf5ff; color:#4a86c8; font-weight:700; }
+#codex .cTag.lk{ background:#f0f0f0; color:#a0a0a0; }
+#codex .cxDetail{ position:absolute; inset:0; z-index:5; display:none; align-items:center; justify-content:center;
+  background:rgba(30,60,100,.42); }
+#codex .cdCard{ width:340px; max-width:88%; background:#fff; border-radius:22px; padding:22px 22px 20px; text-align:center;
+  box-shadow:0 14px 40px rgba(20,50,90,.4); position:relative; }
+#codex .cdCard canvas{ width:120px; height:120px; image-rendering:pixelated; border-radius:50%;
+  background:linear-gradient(180deg,#eaf6ff,#d3ecff); box-shadow:inset 0 0 0 4px #fff,0 3px 8px rgba(60,110,170,.25); }
+#codex .cdName{ font-size:24px; font-weight:800; color:#1e5aa8; margin-top:10px; }
+#codex .cdRole{ font-size:14px; color:#e08a2a; font-weight:700; margin-top:2px; }
+#codex .cdIntro{ font-size:14px; line-height:1.7; color:#43617f; margin-top:12px; text-align:left;
+  background:#f2f8ff; border-radius:12px; padding:12px 14px; }
+#codex .cdHearts{ margin-top:10px; font-size:15px; letter-spacing:1px; }
+#codex .cdClose{ position:absolute; right:14px; top:12px; width:32px; height:32px; border:none; border-radius:50%;
+  background:#eef2f6; color:#5a7ba0; font-size:17px; font-weight:800; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -107,8 +150,14 @@
     <div id="dialog" class="panel"><div class="who"></div><div class="txt"></div>
       <div style="font-size:12px;color:#b08850;margin-top:6px">按 E 继续 · G 送礼物</div></div>
     <div id="toast"></div>
-    <div id="hintbar">WASD 移动 · E 互动 · 空格 技能 · Q 切队员 · R 上/下赛车 · 1-9 道具 · B 手册 · J 冒险日志 · M 大地图 · 路牌🪧快速旅行 · 回车(家/瞭望台旁)睡觉</div>
+    <div id="hintbar">WASD 移动 · E 互动 · 空格 技能 · Q 切队员 · R 上/下赛车 · 1-9 道具 · B 手册 · C 人物图鉴 · J 冒险日志 · M 大地图 · 路牌🪧快速旅行 · 回车睡觉</div>
     <div id="bigwin" class="panel"><button class="close" onclick="UI.closeWin()">✕</button><h3 id="winTitle"></h3><div id="winBody"></div></div>
+    <div id="codex">
+      <div class="cxHead"><h2>🐾 旺旺队人物图鉴 🐾</h2><button class="cxClose" onclick="closeCodex()">✕</button></div>
+      <div class="cxProg" id="cxProg"></div>
+      <div class="cxBody"><div class="cxTabs" id="cxTabs"></div><div class="cxGrid" id="cxGrid"></div></div>
+      <div class="cxDetail" id="cxDetail"><div class="cdCard" id="cdCard"></div></div>
+    </div>
   </div>
   <div id="title">
     <div class="paw" style="left:12%;top:18%">🐾</div><div class="paw" style="right:14%;top:26%;animation-delay:1s">🐾</div>
@@ -193,7 +242,7 @@ const S={
   driving:false, race:null, bestLap:0, raceDone:false, spaDay:-1,
   px:70*TILE, py:96*TILE, dir:2, moving:false, animT:0,
   inv:[{id:"hoe",c:1},{id:"can",c:1},{id:"rod",c:1},{id:"carrotSeed",c:6},{id:"treat",c:3},null,null,null,null],
-  sel:0, crops:{}, friendship:{}, collections:{}, openedChests:{},
+  sel:0, crops:{}, friendship:{}, collections:{}, openedChests:{}, met:{},
   missions:[], missionSeq:0, bearFed:0, bearCalmed:false, junkGot:0,
   inside:null, outPos:null,
 };
@@ -588,7 +637,8 @@ const MTYPES=[
   {id:"animal", pup:"tracker", desc:"小动物被困丛林！",how:"切换丛林，赶到丛林目标点按E解救", spot:()=>[180+(Math.random()*110|0),46+(Math.random()*108|0)], n:1, reward:[230,26]},
   {id:"med",    pup:"sweetie", desc:"有小朋友受伤了！",how:"切换甜甜，赶到现场按E急救", spot:()=>[60+(Math.random()*380|0),44+(Math.random()*115|0)], n:1, reward:[230,26]},
 ];
-function maybeSpawnMission(){ if(S.missions.length>=2) return;
+function maybeSpawnMission(){ if((S.mainStage||0)<1) return;   // mainStage 0：报到前不自动派发救援
+  if(S.missions.length>=2) return;
   let pool=MTYPES.slice(); if(S.weather==="storm") pool=pool.concat([MTYPES[0],MTYPES[0]]);
   spawnMission(pool[Math.random()*pool.length|0]); }
 function spawnMission(mt){
@@ -721,6 +771,7 @@ function fastTravel(i){ const f=FT[i]; S.inside=null; S.px=f.x*TILE; S.py=(f.y+1
 /* ================= 对话框 ================= */
 const dlg={open:false,npc:null,
   show(who,txt,npc){ this.open=true; this.npc=npc||null; $("dialog").style.display="block";
+    if(npc&&npc.name){ S.met=S.met||{}; if(!S.met[npc.name]){ S.met[npc.name]=1; toast("📖 人物图鉴收录："+npc.name+"！（按 C 查看）"); } }
     $("dialog").querySelector(".who").textContent=who; $("dialog").querySelector(".txt").textContent=txt; },
   next(){ this.open=false; this.npc=null; $("dialog").style.display="none"; },
   gift(){ if(!this.npc) return; const s=S.inv[S.sel];
@@ -935,24 +986,45 @@ const GRASS_PAL=[["#6cb257","#66ac51","#57a047","#7cc167"],["#5da84e","#57a248",
   ["#a8994e","#a29348","#948540","#b5a75c"],["#dfe7ee","#d8e1e9","#c8d5e0","#eaf1f6"]];
 function drawTile(x,y){
   const t=map[gi(x,y)], sx=x*TILE-cam.x, sy=y*TILE-cam.y, h=th(x,y);
+  const N=tileAt(x,y-1),Sd=tileAt(x,y+1),W=tileAt(x-1,y),E=tileAt(x+1,y);
+  const chk=(x+y+(h&1))&1;               // 棋盘微差，避免纯色平铺
+  const rp=(i,m)=>((h*(i*2654435761>>>0))>>>0)%m;   // 稳定伪随机位置
   if(t===T.GRASS){ const P=GRASS_PAL[S.season];
-    cx.fillStyle=P[h%2]; cx.fillRect(sx,sy,TILE,TILE);
-    if(h%7===0){ cx.fillStyle=P[2]; cx.fillRect(sx+(h%20),sy+(h%14)+6,4,4); }
-    if(h%9===2){ cx.fillStyle=P[3]; cx.fillRect(sx+(h%16)+4,sy+(h%18)+4,3,7); cx.fillRect(sx+(h%16)+8,sy+(h%18)+7,3,5); } }
-  else if(t===T.WATER){ cx.fillStyle=h%2?"#3f8fca":"#4796d1"; cx.fillRect(sx,sy,TILE,TILE);
+    cx.fillStyle=chk?P[1]:P[0]; cx.fillRect(sx,sy,TILE,TILE);
+    // 柔和色斑（打破大片纯色）
+    if(h%3===0){ cx.fillStyle=P[2]; cx.fillRect(sx+rp(1,14),sy+rp(2,14)+2,10,7); }
+    if(h%4===1){ cx.fillStyle=chk?P[0]:P[1]; cx.fillRect(sx+rp(3,16)+2,sy+rp(4,14)+4,8,6); }
+    // 草簇（带小阴影）
+    const nb=1+(h%3);
+    for(let i=0;i<nb;i++){ const bx=sx+rp(i+5,24)+3, by=sy+rp(i+9,20)+7;
+      cx.fillStyle="rgba(24,52,28,.16)"; cx.fillRect(bx-1,by+5,6,2);
+      cx.fillStyle=P[2]; cx.fillRect(bx,by,2,6); cx.fillStyle=P[3]; cx.fillRect(bx+2,by+1,2,5); cx.fillRect(bx-2,by+2,2,4); }
+    if(h%19===4){ cx.fillStyle="#b7ae95"; disc(cx,sx+rp(6,22)+4,sy+rp(7,18)+6,1.8,"#b7ae95"); }
+    if(h%23===7){ const fc=["#e8d24a","#e87ba0","#c98be0"][h%3]; disc(cx,sx+rp(8,22)+5,sy+rp(9,18)+5,2,fc); disc(cx,sx+rp(8,22)+5,sy+rp(9,18)+5,.9,"#fff7d8"); } }
+  else if(t===T.WATER){ const deep=(N===T.WATER&&Sd===T.WATER&&W===T.WATER&&E===T.WATER);
+    cx.fillStyle=deep?(chk?"#2f7cb6":"#347fba"):(chk?"#3f8fca":"#4796d1"); cx.fillRect(sx,sy,TILE,TILE);
     const w=(x*7+y*13+Math.floor(gameT*3))%11;
     if(w===0){ cx.fillStyle="rgba(255,255,255,.3)"; cx.fillRect(sx+5,sy+10,14,2.5); }
-    if(w===5){ cx.fillStyle="rgba(255,255,255,.18)"; cx.fillRect(sx+14,sy+22,11,2.5); } }
-  else if(t===T.SAND){ cx.fillStyle=h%2?"#e6d095":"#e0ca8c"; cx.fillRect(sx,sy,TILE,TILE);
-    if(h%5===0){ cx.fillStyle="#cdb476"; cx.fillRect(sx+(h%22),sy+(h%20)+4,3,3); } }
-  else if(t===T.SNOW){ cx.fillStyle=h%2?"#eef3f8":"#e7edf4"; cx.fillRect(sx,sy,TILE,TILE);
-    if(h%6===0){ cx.fillStyle="#d5e2ec"; cx.fillRect(sx+(h%20),sy+(h%16)+6,5,3); }
-    if(h%13===1){ cx.fillStyle="#fff"; cx.fillRect(sx+(h%24),sy+(h%22),2,2); } }
-  else if(t===T.PATH){ cx.fillStyle=h%2?"#d9b97e":"#d3b378"; cx.fillRect(sx,sy,TILE,TILE);
-    if(h%3===0){ cx.fillStyle="#c2a066"; cx.fillRect(sx+(h%18)+3,sy+(h%14)+4,5,4); }
-    if(h%4===1){ cx.fillStyle="#b8945c"; cx.fillRect(sx+(h%20)+2,sy+(h%16)+10,4,3); }
-    if(h%7===2){ cx.fillStyle="#e8cf96"; cx.fillRect(sx+(h%16)+6,sy+(h%12)+6,6,5); }
-    if(h%11===3){ cx.fillStyle="#caa76e"; cx.fillRect(sx+2,sy+(h%22)+2,3,3); cx.fillRect(sx+24,sy+(h%18)+6,3,3); } }
+    if(w===5){ cx.fillStyle="rgba(255,255,255,.18)"; cx.fillRect(sx+14,sy+22,11,2.5); }
+    if(deep&&(x*5+y*3+((gameT*1.5)|0))%13===0){ cx.fillStyle="rgba(255,255,255,.45)"; cx.fillRect(sx+rp(1,22)+3,sy+rp(2,18)+4,3,1.5); } }
+  else if(t===T.SAND){ cx.fillStyle=chk?"#e8d29a":"#e1cb8c"; cx.fillRect(sx,sy,TILE,TILE);
+    if(h%3===0){ cx.fillStyle="#ddc588"; cx.fillRect(sx+rp(1,18),sy+rp(2,16),10,7); }
+    const pc=(h%4===2)?3:(h%5===1?1:0);
+    for(let i=0;i<pc;i++){ const px=sx+rp(i+3,25)+3, py=sy+rp(i+6,23)+3;
+      disc(cx,px,py,1.9,"#c9b073"); disc(cx,px-.5,py-.5,1,"#ded0a2"); }
+    if(h%7===4){ cx.strokeStyle="rgba(184,156,96,.4)"; cx.lineWidth=1.4;
+      cx.beginPath(); cx.moveTo(sx+3,sy+20); cx.quadraticCurveTo(sx+16,sy+15,sx+29,sy+22); cx.stroke(); } }
+  else if(t===T.SNOW){ cx.fillStyle=chk?"#eef3f8":"#e7edf4"; cx.fillRect(sx,sy,TILE,TILE);
+    if(h%4===0){ cx.fillStyle="#dbe6f0"; cx.fillRect(sx+rp(1,18),sy+rp(2,14)+4,8,5); }
+    if(h%6===0){ cx.fillStyle="#d5e2ec"; cx.fillRect(sx+rp(3,20),sy+rp(4,16)+6,5,3); }
+    if(h%13===1){ cx.fillStyle="#fff"; cx.fillRect(sx+rp(5,24),sy+rp(6,22),2,2); } }
+  else if(t===T.PATH){ cx.fillStyle=chk?"#dcbd82":"#d3b276"; cx.fillRect(sx,sy,TILE,TILE);
+    if(h%3===0){ cx.fillStyle="#c7a568"; cx.fillRect(sx+rp(1,16)+2,sy+rp(2,14)+3,8,5); }
+    if(h%4===1){ cx.fillStyle="#e8cf96"; cx.fillRect(sx+rp(3,18)+4,sy+rp(4,12)+8,6,4); }
+    const nb=1+(h%3);
+    for(let i=0;i<nb;i++){ const px=sx+rp(i+5,24)+3, py=sy+rp(i+8,22)+4;
+      disc(cx,px,py+1.5,2.3,"rgba(120,96,56,.25)"); disc(cx,px,py,2.1,"#b8945c"); disc(cx,px-.6,py-.6,1.1,"#d0ad74"); }
+    if(h%11===3){ cx.fillStyle="#a98a54"; cx.fillRect(sx+2,sy+rp(9,22)+2,3,3); cx.fillRect(sx+25,sy+rp(10,18)+6,3,3); } }
   else if(t===T.STONE){ cx.fillStyle=h%2?"#b0b4bc":"#a9adb5"; cx.fillRect(sx,sy,TILE,TILE);
     cx.strokeStyle="#8f939b"; cx.lineWidth=1.5; cx.strokeRect(sx+1,sy+1,TILE-2,TILE-2);
     if(h%2) { cx.beginPath(); cx.moveTo(sx+16,sy); cx.lineTo(sx+16,sy+16); cx.lineTo(sx+32,sy+16); cx.stroke(); } }
@@ -979,7 +1051,6 @@ function drawTile(x,y){
     cx.fillStyle="#9c9ca4"; cx.fillRect(sx+(h%12),sy+(h%10),10,8); }
   else if(t===T.ICE){ cx.fillStyle="#cfe8f5"; cx.fillRect(sx,sy,TILE,TILE); }
   /* ---- 过渡与悬崖 ---- */
-  const N=tileAt(x,y-1),Sd=tileAt(x,y+1),W=tileAt(x-1,y),E=tileAt(x+1,y);
   const grassy=v=>v===T.GRASS, GP=GRASS_PAL[S.season][0];
   if(t!==T.GRASS&&t!==T.ROCK&&t!==T.WATER&&t!==T.LAVA&&t!==T.CAVE&&t!==T.DROCK&&t!==T.SNOW){
     cx.fillStyle=GP;
@@ -989,6 +1060,19 @@ function drawTile(x,y){
     if(grassy(E)){ cx.fillRect(sx+TILE-4,sy,4,TILE); cx.fillRect(sx+TILE-6,sy+9,2,6); cx.fillRect(sx+TILE-6,sy+22,2,5); } }
   if(t===T.GRASS){ cx.fillStyle="#eef3f8";
     if(N===T.SNOW){ cx.fillRect(sx,sy,TILE,4); cx.fillRect(sx+6,sy+4,7,2); cx.fillRect(sx+20,sy+4,6,2); } }
+  /* 草地→沙地 暖色岸缘过渡 */
+  if(t===T.GRASS){ cx.fillStyle="rgba(228,206,148,.55)";
+    if(N===T.SAND){ cx.fillRect(sx,sy,TILE,3); cx.fillRect(sx+7,sy+3,7,2); }
+    if(Sd===T.SAND){ cx.fillRect(sx,sy+TILE-3,TILE,3); cx.fillRect(sx+9,sy+TILE-5,7,2); }
+    if(W===T.SAND){ cx.fillRect(sx,sy,3,TILE); }
+    if(E===T.SAND){ cx.fillRect(sx+TILE-3,sy,3,TILE); } }
+  /* 道路石块边缘（临草/沙时镶边碎石）*/
+  if(t===T.PATH){ const es=(ex,ey)=>{ disc(cx,ex,ey+1,2.2,"rgba(118,94,54,.32)"); disc(cx,ex,ey,2,"#b8945c"); disc(cx,ex-.6,ey-.6,1,"#cfaa72"); };
+    const ng=v=>grassy(v)||v===T.SAND||v===T.SOIL;
+    if(ng(N)){ es(sx+8,sy+3); es(sx+23,sy+2); }
+    if(ng(Sd)){ es(sx+6,sy+TILE-3); es(sx+24,sy+TILE-4); }
+    if(ng(W)){ es(sx+3,sy+11); es(sx+2,sy+25); }
+    if(ng(E)){ es(sx+TILE-3,sy+9); es(sx+TILE-4,sy+23); } }
   if(t===T.WATER){ const foam="rgba(255,255,255,"+(0.35+0.2*Math.sin(gameT*2.5+x+y))+")";
     const shal="rgba(150,210,240,.35)";
     if(N!==T.WATER&&N!==undefined){ cx.fillStyle=shal; cx.fillRect(sx,sy,TILE,6); cx.fillStyle=foam; cx.fillRect(sx,sy,TILE,2.5); }
@@ -1402,7 +1486,7 @@ Object.assign(S,{ mainStage:S.mainStage||0, rescueCount:S.rescueCount||0,
 
 /* ---- 主线《冒险湾的秘密》 ---- */
 const MAIN=[
- {t:"第1章 · 新伙伴报到", d:"去市政厅拜访古威市长（小镇中心东北）", type:"talk", npc:"卡洛琳市长",
+ {t:"第1章 · 新伙伴报到", d:"去市政厅拜访卡洛琳市长（小镇中心东北）", type:"talk", npc:"卡洛琳市长",
   say:"欢迎加入旺旺队！冒险湾的安全就靠你们了。先去完成一次救援，让大家看看你们的本领吧！", reward:[100,0]},
  {t:"第1章 · 小试身手", d:"完成 1 次救援任务（等待警报，或去瞭望台领取）", type:"rescue", n:1, reward:[150,10]},
  {t:"第2章 · 咕咕鸡失踪了", d:"回去找卡洛琳市长，她好像遇到了麻烦", type:"talk", npc:"卡洛琳市长",
@@ -1535,6 +1619,60 @@ function drawGroundDecals(x0,y0,x1,y1){
   if(vis(144,151)) pawDecal(144,151,.8);
   if(vis(237,98)) helipadDecal(237,98);
   if(vis(167,8)) drawWaterfall(); }
+
+/* ---- 建筑门口生活化小场景 + 灯串（覆盖层，render 末尾调用）---- */
+function garland(wx1,wy1,wx2,wy2){
+  const ax=wx1*TILE-cam.x, ay=wy1*TILE-cam.y, bx=wx2*TILE-cam.x, by=wy2*TILE-cam.y;
+  const mx=(ax+bx)/2, my=(ay+by)/2+30;
+  cx.strokeStyle="#4f3d2a"; cx.lineWidth=2; cx.beginPath(); cx.moveTo(ax,ay); cx.quadraticCurveTo(mx,my,bx,by); cx.stroke();
+  const cols=["#ffd24a","#ff8f6a","#7ad0ff","#ff6fae","#8ce07a"];
+  for(let i=1;i<9;i++){ const t=i/9, u=1-t;
+    const ix=u*u*ax+2*u*t*mx+t*t*bx, iy=u*u*ay+2*u*t*my+t*t*by;
+    cx.strokeStyle="#4f3d2a"; cx.lineWidth=1; cx.beginPath(); cx.moveTo(ix,iy); cx.lineTo(ix,iy+3); cx.stroke();
+    const c=cols[i%5]; disc(cx,ix,iy+5,3.4,c);
+    if(isNight){ cx.fillStyle="rgba(255,248,200,.35)"; disc(cx,ix,iy+5,6,"rgba(255,248,200,.28)"); }
+    disc(cx,ix-.8,iy+4,1.2,"#fffce0"); } }
+function gpost(wx,wy){ const px=wx*TILE-cam.x, py=wy*TILE-cam.y;
+  cx.fillStyle="rgba(0,0,0,.18)"; cx.beginPath(); cx.ellipse(px,py+34,7,3,0,0,7); cx.fill();
+  cx.fillStyle="#6b4a2c"; cx.fillRect(px-3,py-30,6,64); cx.fillStyle="#835c38"; cx.fillRect(px-3,py-30,2,64);
+  cx.fillStyle="#4f3d2a"; cx.fillRect(px-4,py-32,8,4); }
+function cafeScene(wx,wy){ const px=wx*TILE-cam.x, py=wy*TILE-cam.y;
+  cx.fillStyle="rgba(0,0,0,.16)"; cx.beginPath(); cx.ellipse(px+16,py+30,26,7,0,0,7); cx.fill();
+  // 遮阳伞
+  cx.fillStyle="#7a3f14"; cx.fillRect(px+14,py-4,3,30);
+  cx.fillStyle="#e05848"; cx.beginPath(); cx.moveTo(px-8,py-4); cx.lineTo(px+16,py-22); cx.lineTo(px+40,py-4); cx.closePath(); cx.fill();
+  cx.fillStyle="#f2efe6"; cx.beginPath(); cx.moveTo(px+2,py-4); cx.lineTo(px+16,py-14); cx.lineTo(px+30,py-4); cx.closePath(); cx.fill();
+  // 桌 + 餐盘
+  cx.fillStyle="#9a6b3a"; disc(cx,px+16,py+16,11,"#9a6b3a"); cx.fillStyle="#b9884f"; disc(cx,px+16,py+15,9,"#b9884f");
+  cx.fillStyle="#f2efe6"; disc(cx,px+12,py+14,3,"#f2efe6"); disc(cx,px+21,py+16,3,"#f2efe6");
+  cx.fillStyle="#e0684a"; disc(cx,px+12,py+14,1.4,"#e0684a"); cx.fillStyle="#6fae4a"; disc(cx,px+21,py+16,1.4,"#6fae4a");
+  // 凳
+  cx.fillStyle="#7a5230"; disc(cx,px-2,py+20,4,"#7a5230"); disc(cx,px+34,py+20,4,"#7a5230"); }
+function crossSign(wx,wy){ const px=wx*TILE-cam.x, py=wy*TILE-cam.y;
+  cx.fillStyle="rgba(0,0,0,.18)"; cx.beginPath(); cx.ellipse(px+4,py+30,8,3,0,0,7); cx.fill();
+  cx.fillStyle="#9a7a55"; cx.fillRect(px+2,py+2,5,28);
+  cx.fillStyle="#f4f7fa"; rrect(cx,px-8,py-14,26,22,4,"#f4f7fa"); cx.strokeStyle="#c8ccd2"; cx.lineWidth=1.5; cx.strokeRect(px-8,py-14,26,22);
+  cx.fillStyle="#e0393e"; cx.fillRect(px+1,py-11,8,16); cx.fillRect(px-4,py-6,18,6); }
+function dockGear(wx,wy){ const px=wx*TILE-cam.x, py=wy*TILE-cam.y;
+  // 鱼竿
+  cx.strokeStyle="#8a5f33"; cx.lineWidth=2.4; cx.beginPath(); cx.moveTo(px,py+26); cx.lineTo(px+22,py-16); cx.stroke();
+  cx.strokeStyle="rgba(230,240,245,.7)"; cx.lineWidth=1; cx.beginPath(); cx.moveTo(px+22,py-16); cx.lineTo(px+26,py+6); cx.stroke();
+  // 木桶/绳圈
+  cx.fillStyle="#7a5230"; rrect(cx,px+4,py+12,16,16,3,"#7a5230"); cx.fillStyle="#946a3e"; cx.fillRect(px+4,py+17,16,2); cx.fillRect(px+4,py+23,16,2);
+  cx.strokeStyle="#c8a86a"; cx.lineWidth=2.4; cx.beginPath(); cx.arc(px-8,py+24,6,0,7); cx.stroke();
+  cx.strokeStyle="#b3925a"; cx.lineWidth=2.4; cx.beginPath(); cx.arc(px-8,py+24,3,0,7); cx.stroke(); }
+function drawSceneProps(x0,y0,x1,y1){
+  const vis=(tx,ty)=>tx>=x0-6&&tx<=x1+6&&ty>=y0-6&&ty<=y1+8;
+  // 小镇广场灯串（挂在木杆之间）
+  if(vis(120,84)){ gpost(108,84); gpost(142,84); garland(108,82,142,82); }
+  if(vis(120,95)){ gpost(110,96); gpost(140,96); garland(110,94,140,94); }
+  // 波特小餐馆门口露天桌椅
+  if(vis(105,82)) cafeScene(103,82);
+  // 艾玛博士诊所急救牌
+  if(vis(112,103)) crossSign(112,103);
+  // 港口渔具
+  if(vis(116,162)) dockGear(116,161);
+}
 
 function drawSuv(bx,by){
   cx.fillStyle="rgba(0,0,0,.2)"; cx.beginPath(); cx.ellipse(bx+16,by+30,26,6,0,0,7); cx.fill();
@@ -2023,7 +2161,7 @@ const MAP_ROADS=[
 ];
 /* 河流经过点上的桥（世界坐标）*/
 const MAP_BRIDGES=[[159,45],[160,90],[151,150]];
-const NPC_FALLBACK={"灯塔爷爷":[428,150],"森林护林员":[230,101],"考古学家安娜":[418,118],"古威市长":[136,84]};
+const NPC_FALLBACK={"灯塔爷爷":[428,150],"森林护林员":[230,101],"考古学家安娜":[418,118],"卡洛琳市长":[136,84]};
 function mainGoalPos(){
   const st=MAIN[S.mainStage]; if(!st) return null;
   if(st.npc){ const n=npcs&&npcs.find(o=>o.name===st.npc); if(n) return [n.x,n.y];
@@ -2145,6 +2283,137 @@ function drawMinimap(){
   lx+=104; g.fillStyle="#6b4a24"; g.fillText("按 M 关闭地图",lx,ly);
   g.restore(); }
 
+/* ================= 人物图鉴 ================= */
+const CX_ALLY=["莱德队长","卡洛琳市长","丁丁叔叔","波特先生","凯蒂","农场主由美","渔夫杰克","阿宝船长","灯塔爷爷","艾玛博士","林老师","小美","壮壮","邮递员飞飞","面包师松松","矿工石头叔","汤姆","亚历克斯","森林护林员","艾米奶奶","赛车手阿隆","考古学家安娜","古堡管家"];
+const CX_RESIDENT=["咕咕鸡","华力","咪咪","嘎嘎","贝茜","咕咕","闪电","比利","胖胖","绵绵","跳跳","壳壳"];
+const CX_VILLAIN=["海丁那市长","罗伯特","维多利亚","捣蛋魁","恶作剧博士","喵喵先生","尖钩船长","火箭姐","轰隆隆","暗影猎犬"];
+const CX_ANIMAL_IC={cat:"🐱",gull:"🐦",cow:"🐮",horse:"🐴",goat:"🐐",pig:"🐷",sheep:"🐑",rabbit:"🐰",turtle:"🐢"};
+const CMETA={
+ "莱德队长":["旺旺队队长","冷静又勇敢的小队长，关键时刻总能沉着指挥全队。"],
+ "卡洛琳市长":["冒险湾市长","热心的市长，把整座小镇的安全都托付给了旺旺队。"],
+ "丁丁叔叔":["冒险湾管理员","管着水电与路灯的老好人，凡事找他登记准没错。"],
+ "波特先生":["餐馆老板","小餐馆的大厨，招牌汉堡是孩子们的最爱。"],
+ "凯蒂":["通讯专家","宠物乐园主理人，也是镇上顶尖的对讲机维修高手。"],
+ "农场主由美":["农场主","由美农场的主人，手把手教你翻地、播种和浇水。"],
+ "渔夫杰克":["港口负责人","守着港口的老渔夫，知道哪里能钓到最大的鱼。"],
+ "阿宝船长":["出海向导","乐呵呵的老船长，对海况了如指掌。"],
+ "灯塔爷爷":["灯塔守护者","独自守着老灯塔，为夜里迷航的船只指引方向。"],
+ "艾玛博士":["科学顾问","冷静睿智的科学家，诊所里的救护也全靠她。"],
+ "林老师":["冒险学校老师","耐心的老师，相信探索就是最好的课堂。"],
+ "小美":["镇上的小女孩","爱漂亮又爱笑，喜欢在广场上和大家玩耍。"],
+ "壮壮":["镇上的小男孩","活力十足，最崇拜勇敢的旺旺队。"],
+ "邮递员飞飞":["邮递员","风雨无阻送信的邮差，脚程飞快。"],
+ "面包师松松":["面包师","面包坊的主人，清晨的香气就是他的招牌。"],
+ "矿工石头叔":["矿工","常年在杰克山矿洞里挥镐的硬汉，力气很大。"],
+ "汤姆":["雪山救援员","驻守雪山的救援员，滑雪技术一流。"],
+ "亚历克斯":["技术专家","什么机器都能修好的发明达人。"],
+ "森林护林员":["自然守护者","守护冒险丛林的护林员，熟悉每一条兽径。"],
+ "艾米奶奶":["村庄长者","慈祥的奶奶，总爱把糖果分给镇上的孩子们。"],
+ "赛车手阿隆":["赛车手","赛车场的常客，动作花哨但是真心热爱赛车。"],
+ "考古学家安娜":["考古学家","痴迷远古遗迹的学者，能读懂古老的铭文。"],
+ "古堡管家":["古堡管家","打理古堡的沉默管家，肚子里藏着不少老故事。"],
+ "咕咕鸡":["市长的宠物鸡","市长的贴身助手，一不留神就跑得没影。"],
+ "华力":["海象居民","住在码头边海里的憨厚海象，最爱在水里翻滚。"],
+ "咪咪":["宠物猫","慵懒又高傲的宠物猫，爱找个暖和地方晒太阳。"],
+ "嘎嘎":["港口海鸥","在港口盘旋的海鸥，一直盯着你背包里的鱼。"],
+ "贝茜":["农场奶牛","脖子挂着铃铛的奶牛，悠闲地嚼着青草。"],
+ "咕咕":["农场母鸡","骄傲的农场母鸡，整天咯咯哒个不停。"],
+ "闪电":["赛马","赛车场旁的骏马，踏着蹄子跃跃欲试。"],
+ "比利":["山羊","爱站在岩石上眺望的山羊，倔强又好奇。"],
+ "胖胖":["农场小猪","爱在泥里打滚的小猪，闻到南瓜就来劲。"],
+ "绵绵":["牧场绵羊","一身像云朵一样软的白毛。"],
+ "跳跳":["森林兔子","警觉又爱蹦跶的小兔子，绕着你转圈。"],
+ "壳壳":["海边小海龟","慢悠悠地爬着，总望着大海的方向。"],
+ "海丁那市长":["竞争对手市长","一心想取而代之的邻镇市长，爱吹嘘自己的雾都。"],
+ "罗伯特":["机械发明家","造钻井机的发明家，觉得发明只为赚钱。"],
+ "维多利亚":["神秘企业家","觊觎金字塔宝物的女商人，做事讲究先下手为强。"],
+ "捣蛋魁":["小偷头目","鬼鬼祟祟的小偷，嘴上永远喊着冤枉。"],
+ "恶作剧博士":["疯狂科学家","沉迷恶作剧道具的博士，把制造混乱当乐趣。"],
+ "喵喵先生":["狡猾商人","戴着猫耳的二手商人，做买卖九真一假。"],
+ "尖钩船长":["海盗头目","占着神秘岛的海盗，口口声声说宝藏是他的。"],
+ "火箭姐":["武器专家","在峡谷里试火箭的女工程师，威力越大越开心。"],
+ "轰隆隆":["暴走车手","赛车场的反派车手，只服跑得比他还快的人。"],
+ "暗影猎犬":["黑暗爪牙","深林里孤独的黑犬，眼神里似乎藏着孤独。"],
+};
+const PUP_INTRO={ chase:"冷静的领队犬，用追踪技能锁定任务方向。", marshall:"热心的消防犬，一挥水枪就能扑灭火焰。",
+ rubble:"力气超大的工程犬，一铲子击碎挡路的岩石。", zuma:"自在的水上救援犬，在水里来去自如。",
+ rocky:"爱回收的环保犬，把垃圾变成有用的材料。", skye:"勇敢的飞行犬，展翅越过水面与障碍。",
+ everest:"不怕冷的雪地犬，在冰雪上飞驰救援。", tracker:"机敏的丛林犬，用寻宝技能感知隐藏宝箱。",
+ seabao:"沉稳的海洋犬，声呐一响下一竿必定上钩。", sweetie:"温柔的医疗犬，急救鼓舞让大家充满干劲。" };
+const npcByName=nm=>npcs.find(n=>n.name===nm);
+function cxEntries(cat){
+  if(cat==="pup") return PUP_KEYS.map(k=>({kind:"pup",key:k,name:PUPS[k].name,role:PUPS[k].title,intro:PUP_INTRO[k]}));
+  const arr=cat==="ally"?CX_ALLY:cat==="resident"?CX_RESIDENT:CX_VILLAIN;
+  return arr.map(nm=>({kind:"npc",name:nm,role:(CMETA[nm]||["居民",""])[0],intro:(CMETA[nm]||["",""])[1]}));
+}
+const cxUnlocked=e=> e.kind==="pup" ? true : !!(S.met&&S.met[e.name]) || (S.friendship&&S.friendship[e.name]>0);
+function cxPortrait(canvas,size,e,unlocked){ const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,size,size);
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  if(!unlocked){ ctx.fillStyle="#c3ccd6"; ctx.beginPath(); ctx.arc(size/2,size/2,size*0.4,0,7); ctx.fill();
+    ctx.fillStyle="#8fa0b0"; ctx.font="800 "+(size*0.5)+"px sans-serif"; ctx.fillText("?",size/2,size*0.55); return; }
+  if(e.kind==="pup"){ const a=AVA[e.key]; if(a) ctx.drawImage(a,0,0,48,48,size*0.08,size*0.06,size*0.84,size*0.84); return; }
+  const n=npcByName(e.name); const u=size/84, cxp=size/2;
+  const ic = n&&n.animal?CX_ANIMAL_IC[n.animal] : n&&n.chicken?"🐔" : n&&n.aqua?"🦭" : (n&&n.dog&&!n.catears)?"🐺" : null;
+  if(ic){ const bg=(n&&n.col)?shade(n.col,.4):"#dff0ff"; ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cxp,size/2,size*0.4,0,7); ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,.7)"; ctx.lineWidth=size*0.05; ctx.stroke();
+    ctx.font=(size*0.56)+"px serif"; ctx.fillText(ic,cxp,size*0.58); return; }
+  const col=(n&&n.col)||"#7a9cc0", hair=(n&&n.hair)||"#4a3a2a";
+  // 身体
+  ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(cxp,size*0.95,size*0.34,size*0.24,0,0,7); ctx.fill();
+  ctx.fillStyle=shade(col,-.2); ctx.fillRect(cxp-size*0.3,size*0.8,size*0.6,4*u);
+  // 脖子 + 头
+  ctx.fillStyle="#eab98a"; ctx.fillRect(cxp-6*u,size*0.56,12*u,12*u);
+  ctx.fillStyle="#f4cfa0"; ctx.beginPath(); ctx.arc(cxp,size*0.44,size*0.235,0,7); ctx.fill();
+  // 猫耳
+  if(n&&n.catears){ ctx.fillStyle=hair;
+    ctx.beginPath(); ctx.moveTo(cxp-14*u,size*0.3); ctx.lineTo(cxp-8*u,size*0.16); ctx.lineTo(cxp-2*u,size*0.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cxp+2*u,size*0.3); ctx.lineTo(cxp+8*u,size*0.16); ctx.lineTo(cxp+14*u,size*0.3); ctx.fill(); }
+  // 头发
+  ctx.fillStyle=hair; ctx.beginPath(); ctx.arc(cxp,size*0.4,size*0.25,Math.PI*1.03,Math.PI*2.03); ctx.fill();
+  ctx.fillRect(cxp-size*0.25,size*0.33,size*0.5,size*0.07);
+  ctx.fillRect(cxp-size*0.24,size*0.36,5*u,size*0.13); ctx.fillRect(cxp+size*0.24-5*u,size*0.36,5*u,size*0.13);
+  // 眼睛
+  ctx.fillStyle="#33261a"; ctx.beginPath(); ctx.arc(cxp-8*u,size*0.44,3*u,0,7); ctx.arc(cxp+8*u,size*0.44,3*u,0,7); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(cxp-7*u,size*0.43,1*u,0,7); ctx.arc(cxp+9*u,size*0.43,1*u,0,7); ctx.fill();
+  // 腮红 + 微笑
+  ctx.fillStyle="rgba(240,150,150,.4)"; ctx.beginPath(); ctx.arc(cxp-13*u,size*0.5,3*u,0,7); ctx.arc(cxp+13*u,size*0.5,3*u,0,7); ctx.fill();
+  ctx.strokeStyle="#b06a4a"; ctx.lineWidth=2*u; ctx.beginPath(); ctx.arc(cxp,size*0.49,6*u,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+}
+let cxTab="pup";
+function openCodex(){ if(!S.started||S.inside!=null) {} $("codex").style.display="block"; $("cxDetail").style.display="none"; renderCodex(); }
+function closeCodex(){ $("codex").style.display="none"; $("cxDetail").style.display="none"; }
+function renderCodex(){
+  const cats=[["pup","旺旺队成员"],["ally","盟友伙伴"],["resident","冒险居民"],["villain","反派角色"]];
+  const tabs=$("cxTabs"); tabs.innerHTML="";
+  cats.forEach(([k,t])=>{ const d=document.createElement("div"); d.className="cxTab"+(k===cxTab?" on":""); d.textContent=t;
+    d.onclick=()=>{ cxTab=k; renderCodex(); }; tabs.appendChild(d); });
+  const all=["pup","ally","resident","villain"].flatMap(cxEntries);
+  const un=all.filter(cxUnlocked).length;
+  $("cxProg").textContent="已解锁 "+un+" / "+all.length+" 位角色　·　点击卡片查看详情　·　按 C 或 ✕ 关闭";
+  const grid=$("cxGrid"); grid.innerHTML="";
+  cxEntries(cxTab).forEach(e=>{ const ok=cxUnlocked(e);
+    const card=document.createElement("div"); card.className="ccard"+(ok?"":" locked");
+    const cvp=document.createElement("canvas"); cvp.width=cvp.height=84; cxPortrait(cvp,84,e,ok); card.appendChild(cvp);
+    const nm=document.createElement("div"); nm.className="cName"; nm.textContent=ok?e.name:"？？？"; card.appendChild(nm);
+    const rl=document.createElement("div"); rl.className="cRole"; rl.textContent=ok?e.role:"尚未遇见"; card.appendChild(rl);
+    const tg=document.createElement("div"); tg.className="cTag"+(ok?"":" lk"); tg.textContent=ok?"✔ 已解锁":"🔒 未遇见"; card.appendChild(tg);
+    card.onclick=()=>{ ok?openCxDetail(e):toast("还没遇见这位角色，去冒险湾里找找 TA 吧！"); };
+    grid.appendChild(card); });
+}
+function openCxDetail(e){
+  const ok=cxUnlocked(e), box=$("cdCard"); box.innerHTML="";
+  const btn=document.createElement("button"); btn.className="cdClose"; btn.textContent="✕"; btn.onclick=()=>{$("cxDetail").style.display="none";}; box.appendChild(btn);
+  const cvp=document.createElement("canvas"); cvp.width=cvp.height=120; cxPortrait(cvp,120,e,ok); box.appendChild(cvp);
+  const nm=document.createElement("div"); nm.className="cdName"; nm.textContent=e.name; box.appendChild(nm);
+  const rl=document.createElement("div"); rl.className="cdRole"; rl.textContent=e.role; box.appendChild(rl);
+  const intro=document.createElement("div"); intro.className="cdIntro"; intro.textContent=e.intro||"——"; box.appendChild(intro);
+  const ht=document.createElement("div"); ht.className="cdHearts";
+  if(e.kind==="pup"){ ht.textContent="⭐ 等级 Lv."+pupLv(e.key); }
+  else { const f=Math.min(10,S.friendship[e.name]||0); ht.innerHTML="好感度 "+"❤️".repeat(f)+"🤍".repeat(10-f); }
+  box.appendChild(ht);
+  $("cxDetail").style.display="flex";
+}
+
 /* ================= 主渲染 ================= */
 function render(){
   if(S.inside!=null){ renderInterior(); return; }
@@ -2211,6 +2480,7 @@ function render(){
   RL.push({y:S.py+32,f:drawPlayer});
   RL.sort((a,b)=>a.y-b.y);
   RL.forEach(r=>r.f()); RL.forEach(r=>r.lb&&r.lb());
+  drawSceneProps(x0,y0,x1,y1);
   /* 任务标记 */
   for(const m of S.missions) for(const t of m.targets){ if(t.done)continue;
     const bx=t.x*TILE-cam.x+16, by=t.y*TILE-cam.y-10+Math.sin(gameT*4)*4;
@@ -2289,7 +2559,8 @@ addEventListener("keydown",e=>{
   if(k==="m") S.showMap=!S.showMap;
   if(k==="b"){ $("bigwin").style.display==="block"?UI.closeWin():UI.bag(); }
   if(k==="j"){ $("bigwin").style.display==="block"?UI.closeWin():UI.journal(); }
-  if(k==="escape"){ UI.closeWin(); S.showMap=false; }
+  if(k==="c"){ $("codex").style.display==="block"?closeCodex():openCodex(); }
+  if(k==="escape"){ UI.closeWin(); S.showMap=false; if($("codex").style.display==="block")closeCodex(); }
   if(k===" "){ e.preventDefault();
     if(fishing){ if(fishing.hooked){ endFishing(Math.abs(fishing.pos-(fishing.zone+.11))<.13); } return; }
     useSkill(); }
@@ -2383,7 +2654,7 @@ function startGame(fresh){
   toast("🐾 欢迎来到冒险湾！按 M 看大地图，警报响了记得切换队员！");
   setTimeout(()=>{ const st=MAIN[S.mainStage];
     if(st) toast("📖 主线目标："+st.d+"（按 J 打开冒险日志）"); },2500);
-  setTimeout(()=>{ if(S.missions.length===0&&S.day===1&&S.season===0) spawnMission(MTYPES[1]); },30000);
+  setTimeout(()=>{ if((S.mainStage||0)>=1&&S.missions.length===0&&S.day===1&&S.season===0) spawnMission(MTYPES[1]); },30000);
 }
 $("btnNew").onclick=()=>{ try{localStorage.removeItem("pawAdventureSave3");}catch(e){} startGame(true); };
 $("btnLoad").onclick=()=>startGame(false);
